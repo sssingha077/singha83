@@ -1,0 +1,61 @@
+# Load library and read data
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+setwd('E:\\Dropbox\\Soumya') # Change to your working directory
+
+# Read the data
+
+a <- read.csv('DataFile.csv')
+a <- na.omit(a)
+N <- nrow(a)
+trn.splt<- 65
+N.trn<- as.integer(N*trn.splt/100)
+N.trn
+
+# Split data into training and validation
+
+set.seed(123)
+idx.trn <- sample(1:N,N.trn,replace = FALSE)
+idx.valid<- setdiff(1:N,idx.trn)
+
+# Create a subset of continuous variables and subset train and validation
+
+ccols<- c(1:6) # Extract columns with continuous data
+a.cont<- a[,ccols]
+train<- a.cont[idx.trn,]
+validation<- a.cont[idx.valid,]
+
+# Fit Random Forest
+GWQI.train<- train$GWQI  # Pull out GWQI from training data
+inp.train<- train[,-6]  # Pull out other inputs
+
+GWQI.validation<- validation$GWQI  # GWQI for validation
+inp.validation<- validation[,-6]  # inputs for validation  
+
+GWQI.RF.Train<- randomForest(inp.train,GWQI.train,ntree=500,
+importance=TRUE,mtry=1)
+GWQI.RF.Validation<- randomForest(inp.validation,GWQI.validation,
+ntree=500,mtry=1)
+
+# Variable Importance of validation dataset using randomForest
+
+varImpPlot(GWQI.RF.Validation,type=2,n.var=5)
+importance(GWQI.RF.Validation)
+
+
+#Error estimation in training and validation 
+
+plot(GWQI.RF.Train,col='red',type="l")
+plot(GWQI.RF.Validation,col='blue')
+
+# CART tree plotting using "rpart" package
+
+GWQI.CART <- rpart(GWQI~.,data=validation, method = 'anova')
+rpart.plot(GWQI.CART)
+
+# Estimation of "cp" value and plotting
+
+printcp(GWQI.CART)
+plotcp(GWQI.CART)
+
